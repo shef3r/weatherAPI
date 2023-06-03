@@ -24,7 +24,7 @@ namespace weatherAPI
 
         public static async Task<List<City>> CitySearcher(string query, string limit, string langCode)
         {
-            using HttpClient client = new HttpClient();
+            HttpClient client = new HttpClient();
             HttpResponseMessage response = await client.GetAsync($"https://geocoding-api.open-meteo.com/v1/search?name={query}&count={limit}&language={langCode}&format=json");
             response.EnsureSuccessStatusCode();
             string result = await response.Content.ReadAsStringAsync();

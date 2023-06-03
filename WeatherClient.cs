@@ -4,8 +4,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-#pragma warning disable CS8618
-
 namespace weatherAPI
 {
     public class WeatherClient
