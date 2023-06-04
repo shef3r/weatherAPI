@@ -121,9 +121,17 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CitySearch.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
+    <Compile Include="Models\City.cs" />
+    <Compile Include="Models\CitySearchResult.cs" />
+    <Compile Include="Models\Daily.cs" />
+    <Compile Include="Models\DailyForecast.cs" />
+    <Compile Include="Models\DailyUnits.cs" />
+    <Compile Include="Models\Hourly.cs" />
+    <Compile Include="Models\HourlyForecast.cs" />
+    <Compile Include="Models\HourlyUnits.cs" />
+    <Compile Include="Models\Root.cs" />
+    <Compile Include="Models\WeatherData.cs" />
+    <Compile Include="WeatherJsonContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WeatherClient.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
