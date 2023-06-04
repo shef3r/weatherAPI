@@ -9,7 +9,7 @@ namespace weatherAPI
 {
     public sealed class WeatherClient : IDisposable
     {
-        public static HttpClient Client { get; } = new();
+        public HttpClient Client { get; } = new();
 
         public static async Task<WeatherData> SearchWeatherAsync(City city, bool useAmericanSystem)
         {
