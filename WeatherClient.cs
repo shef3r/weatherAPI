@@ -1,160 +1,80 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using weatherAPI.Models;
 
 namespace weatherAPI
 {
-    public class WeatherClient
+    public sealed class WeatherClient : IDisposable
     {
-        internal class Daily
-        {
-            public List<string> time { get; set; }
-            public List<int> weathercode { get; set; }
-            public List<double> temperature_2m_max { get; set; }
-            public List<double> temperature_2m_min { get; set; }
-            public List<double> apparent_temperature_max { get; set; }
-            public List<double> apparent_temperature_min { get; set; }
-            public List<string> sunrise { get; set; }
-            public List<string> sunset { get; set; }
-            public List<double> windspeed_10m_max { get; set; }
-            public List<int> winddirection_10m_dominant { get; set; }
-        }
+        public static HttpClient Client { get; } = new();
 
-        internal class DailyUnits
+        public static async Task<WeatherData> SearchWeatherAsync(City city, bool useAmericanSystem)
         {
-            public string time { get; set; }
-            public string weathercode { get; set; }
-            public string temperature_2m_max { get; set; }
-            public string temperature_2m_min { get; set; }
-            public string apparent_temperature_max { get; set; }
-            public string apparent_temperature_min { get; set; }
-            public string sunrise { get; set; }
-            public string sunset { get; set; }
-            public string windspeed_10m_max { get; set; }
-            public string winddirection_10m_dominant { get; set; }
-        }
+            if (useAmericanSystem)
+                throw new ArgumentException("american stuff doesnt work yet");
 
-        internal class Hourly
-        {
-            public List<string> time { get; set; }
-            public List<double> temperature_2m { get; set; }
-            public List<int> weathercode { get; set; }
-            public List<double> windspeed_10m { get; set; }
-            public List<int> winddirection_10m { get; set; }
-        }
+            string url = $"https://api.open-meteo.com/v1/forecast?latitude={city.Latitude.ToString().Replace(",", ".")}&longitude={city.Longitude.ToString().Replace(",", ".")}&hourly=temperature_2m,weathercode,windspeed_10m,winddirection_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,windspeed_10m_max,winddirection_10m_dominant&timezone=auto";
 
-        internal class HourlyUnits
-        {
-            public string time { get; set; }
-            public string temperature_2m { get; set; }
-            public string weathercode { get; set; }
-            public string windspeed_10m { get; set; }
-            public string winddirection_10m { get; set; }
-        }
+            using var stream = await Client.GetStreamAsync(url);
+            Root root = await JsonSerializer.DeserializeAsync(stream, WeatherJsonContext.Default.Root);
 
-        internal class Root
-        {
-            public double latitude { get; set; }
-            public double longitude { get; set; }
-            public double generationtime_ms { get; set; }
-            public int utc_offset_seconds { get; set; }
-            public string timezone { get; set; }
-            public string timezone_abbreviation { get; set; }
-            public double elevation { get; set; }
-            public HourlyUnits hourly_units { get; set; }
-            public Hourly hourly { get; set; }
-            public DailyUnits daily_units { get; set; }
-            public Daily daily { get; set; }
-        }
+            var hourlyForecasts = new List<HourlyForecast>();
 
-        public class HourlyForecast
-        {
-            public string time { get; set; }
-            public double temperature { get; set; }
-            public int weatherCode { get; set; }
-            public double windSpeed { get; set; }
-            public int windDirection { get; set; }
-        }
-
-        public class DailyForecast
-        {
-            public string time { get; set; }
-            public double temperatureMax { get; set; }
-            public double temperatureMin { get; set; }
-            public int weatherCode { get; set; }
-            public double apparentTemperatureMax { get; set; }
-            public double apparentTemperatureMin { get; set; }
-            public string sunrise { get; set; }
-            public string sunset { get; set; }
-            public double windSpeedMax { get; set; }
-            public int windDirectionDominant { get; set; }
-        }
-
-        public class WeatherData
-        {
-            public List<HourlyForecast> HourlyForecasts { get; set; }
-            public List<DailyForecast> DailyForecasts { get; set; }
-            public weatherAPI.CitySearch.City City { get; set; }
-        }
-
-        public static async Task<WeatherData> WeatherSearch(weatherAPI.CitySearch.City city, bool useAmericanSystem)
-        {
-            if (useAmericanSystem == true)
+            for (int i = 0; i < root.Hourly.Time.Count; i++)
             {
-                throw new Exception("american stuff doesnt work yet");
-            }
-            else if (useAmericanSystem == false)
-            {
-                using HttpClient client = new HttpClient();
-                string url = $"https://api.open-meteo.com/v1/forecast?latitude={city.latitude.ToString().Replace(",",".")}&longitude={city.longitude.ToString().Replace(",",".")}&hourly=temperature_2m,weathercode,windspeed_10m,winddirection_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,windspeed_10m_max,winddirection_10m_dominant&timezone=auto";
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                string result = await response.Content.ReadAsStringAsync();
-                Root root = JsonConvert.DeserializeObject<Root>(result);
-                List<HourlyForecast> hourlyForecasts = new List<HourlyForecast>();
-                for (int i = 0; i < root.hourly.time.Count; i++)
+                var hourlyForecast = new HourlyForecast
                 {
-                    HourlyForecast hourlyForecast = new HourlyForecast
-                    {
-                        time = root.hourly.time[i],
-                        temperature = root.hourly.temperature_2m[i],
-                        weatherCode = root.hourly.weathercode[i],
-                        windSpeed = root.hourly.windspeed_10m[i],
-                        windDirection = root.hourly.winddirection_10m[i]
-                    };
-                    hourlyForecasts.Add(hourlyForecast);
-                }
-
-                List<DailyForecast> dailyForecasts = new List<DailyForecast>();
-                for (int i = 0; i < root.daily.time.Count; i++)
-                {
-                    DailyForecast dailyForecast = new DailyForecast
-                    {
-                        time = root.daily.time[i],
-                        temperatureMax = root.daily.temperature_2m_max[i],
-                        temperatureMin = root.daily.temperature_2m_min[i],
-                        weatherCode = root.daily.weathercode[i],
-                        apparentTemperatureMax = root.daily.apparent_temperature_max[i],
-                        apparentTemperatureMin = root.daily.apparent_temperature_min[i],
-                        sunrise = root.daily.sunrise[i],
-                        sunset = root.daily.sunset[i],
-                        windSpeedMax = root.daily.windspeed_10m_max[i],
-                        windDirectionDominant = root.daily.winddirection_10m_dominant[i]
-                    };
-                    dailyForecasts.Add(dailyForecast);
-                }
-
-                return new WeatherData
-                {
-                    HourlyForecasts = hourlyForecasts,
-                    DailyForecasts = dailyForecasts,
-                    City = city
+                    Time = root.Hourly.Time[i],
+                    Temperature = root.Hourly.Temperature2Meter[i],
+                    WeatherCode = root.Hourly.WeatherCode[i],
+                    WindSpeed = root.Hourly.WindSpeed10Meter[i],
+                    WindDirection = root.Hourly.WindDirection10Meter[i]
                 };
+
+                hourlyForecasts.Add(hourlyForecast);
             }
 
-            throw new Exception();
+            var dailyForecasts = new List<DailyForecast>();
+
+            for (int i = 0; i < root.Daily.Time.Count; i++)
+            {
+                var dailyForecast = new DailyForecast
+                {
+                    Time = root.Daily.Time[i],
+                    TemperatureMax = root.Daily.Temperature2MeterMax[i],
+                    TemperatureMin = root.Daily.Temperature2MeterMin[i],
+                    WeatherCode = root.Daily.WeatherCode[i],
+                    ApparentTemperatureMax = root.Daily.ApparentTemperatureMax[i],
+                    ApparentTemperatureMin = root.Daily.ApparentTemperatureMin[i],
+                    Sunrise = root.Daily.Sunrise[i],
+                    Sunset = root.Daily.Sunset[i],
+                    WindSpeedMax = root.Daily.WindSpeed10MeterMax[i],
+                    WindDirectionDominant = root.Daily.WindDirection10MeterDominant[i]
+                };
+
+                dailyForecasts.Add(dailyForecast);
+            }
+
+            return new WeatherData
+            {
+                HourlyForecasts = hourlyForecasts,
+                DailyForecasts = dailyForecasts,
+                City = city
+            };
         }
+
+        public static async Task<List<City>> SearchCityAsync(string query, string limit, string langCode)
+        {
+            using var stream = await Client.GetStreamAsync($"https://geocoding-api.open-meteo.com/v1/search?name={query}&count={limit}&language={langCode}&format=json");
+
+            CitySearchResult result = await JsonSerializer.DeserializeAsync(stream, WeatherJsonContext.Default.CitySearchResult);
+            return result.Results;
+        }
+
+        public void Dispose()
+            => Client.Dispose();
     }
 }
