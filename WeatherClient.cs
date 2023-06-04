@@ -7,9 +7,9 @@ using weatherAPI.Models;
 
 namespace weatherAPI
 {
-    public sealed class WeatherClient : IDisposable
+    public static class WeatherClient
     {
-        public HttpClient Client { get; } = new();
+        private static HttpClient _client { get; } = new();
 
         public static async Task<WeatherData> SearchWeatherAsync(City city, bool useAmericanSystem)
         {
@@ -18,7 +18,7 @@ namespace weatherAPI
 
             string url = $"https://api.open-meteo.com/v1/forecast?latitude={city.Latitude.ToString().Replace(",", ".")}&longitude={city.Longitude.ToString().Replace(",", ".")}&hourly=temperature_2m,weathercode,windspeed_10m,winddirection_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,windspeed_10m_max,winddirection_10m_dominant&timezone=auto";
 
-            using var stream = await Client.GetStreamAsync(url);
+            using var stream = await _client.GetStreamAsync(url);
             Root root = await JsonSerializer.DeserializeAsync(stream, WeatherJsonContext.Default.Root);
 
             var hourlyForecasts = new List<HourlyForecast>();
@@ -68,13 +68,10 @@ namespace weatherAPI
 
         public static async Task<List<City>> SearchCityAsync(string query, string limit, string langCode)
         {
-            using var stream = await Client.GetStreamAsync($"https://geocoding-api.open-meteo.com/v1/search?name={query}&count={limit}&language={langCode}&format=json");
+            using var stream = await _client.GetStreamAsync($"https://geocoding-api.open-meteo.com/v1/search?name={query}&count={limit}&language={langCode}&format=json");
 
             CitySearchResult result = await JsonSerializer.DeserializeAsync(stream, WeatherJsonContext.Default.CitySearchResult);
             return result.Results;
         }
-
-        public void Dispose()
-            => Client.Dispose();
     }
 }
