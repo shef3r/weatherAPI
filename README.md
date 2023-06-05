@@ -4,4 +4,4 @@ I'm presenting a little wrapper for [Open-Meteo](https://open-meteo.com/) that w
 
 TODO:
 
-- [ ] add support for american measurments (Fahrenheit, MPH etc)
+- [x] add support for american measurments (Fahrenheit, MPH etc)
